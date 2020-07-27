@@ -1,0 +1,31 @@
+name: "Build and Distribute Docker to DockerHub"
+on: [push]
+
+jobs:
+  build-base:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v1
+      - name: Read VERSION
+        id: read_version
+        # GitHub Actions set-output DOES NOT support multi-line string
+        # so it only set the first line.
+        # The trick of using `echo` is found at https://stackoverflow.com/a/3458034/495558 
+        run: |
+          content=$(echo $(<./project.json))
+          echo "::set-output name=projectJson::$content"
+      - name: "Build Docker image"
+        uses: "docker/build-push-action@v1"
+        with:
+          repository: "ubitecag/jasyptcli"
+          username: ${{ secrets.UBITEC_DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.UBITEC_DOCKER_HUB_PASSWORD }}
+          tags: >
+            ${{ fromJson(steps.read_version.outputs.projectJson).version }},
+            latest
+          labels: >
+            io.ubitec.image.name=jasyptcli,
+            io.ubitec.image.version=${{ fromJson(steps.read_version.outputs.projectJson).version }}
+            io.ubitec.image.authors=admins@ubitec.ch
+          add_git_labels: true
